@@ -4,14 +4,18 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useUnits } from "@/contexts/units";
 import { searchCities, type CityResult } from "@/services/geocoding";
+import { showWeatherNotification } from "@/services/notifications";
 import { saveSelectedLocation } from "@/services/storage";
+import { fetchWeather } from "@/services/weather";
 
 export default function SearchScreen() {
   const [text, setText] = useState("");
   const [debounced, setDebounced] = useState("");
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { unit, convertTemp } = useUnits();
 
   // Debounce: počkáme 350 ms po poslednom stlačení, až potom hľadáme.
   // Bez toho by sme volali API pri každom písmene. setTimeout v efekte je
@@ -28,13 +32,29 @@ export default function SearchScreen() {
   });
 
   async function handleSelect(city: CityResult) {
+    const location = { latitude: city.latitude, longitude: city.longitude, city: city.name };
+
     // Uložíme vybrané mesto a invalidujeme dotaz, aby ho obrazovka Počasie znova načítala.
-    await saveSelectedLocation({
-      latitude: city.latitude,
-      longitude: city.longitude,
-      city: city.name,
-    });
+    await saveSelectedLocation(location);
     await queryClient.invalidateQueries({ queryKey: ["selectedLocation"] });
+
+    try {
+      // fetchQuery = stiahne počasie a ZÁROVEŇ ho uloží do cache pod kľúč ["weather", mesto].
+      // Vďaka tomu ho má obrazovka Počasie hneď (bez druhého fetchu) a my máme info do notifikácie.
+      const weather = await queryClient.fetchQuery({
+        queryKey: ["weather", location.city],
+        queryFn: () => fetchWeather(location.latitude, location.longitude, location.city),
+      });
+      const temp = `${convertTemp(weather.temperature)}°${unit}`;
+      // Local notifikácia v lište telefónu (fire-and-forget, nech neblokuje navigáciu).
+      void showWeatherNotification(
+        `Mesto nastavené: ${weather.city}`,
+        `Aktuálne ${temp} · ${weather.description}`,
+      );
+    } catch {
+      // ak sa počasie nepodarí stiahnuť, notifikáciu nepošleme
+    }
+
     router.navigate("/"); // prepneme späť na Počasie
   }
 

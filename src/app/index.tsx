@@ -1,11 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WeatherCard } from "@/components/weather-card";
 import { getWeatherTheme } from "@/constants/weather-theme";
+import { useUnits } from "@/contexts/units";
 import { getDeviceLocation } from "@/services/location";
 import { getLastLocation, getSelectedLocation, saveLastLocation } from "@/services/storage";
 import { fetchWeather } from "@/services/weather";
@@ -14,6 +22,13 @@ import { fetchWeather } from "@/services/weather";
 const BRATISLAVA = { latitude: 48.15, longitude: 17.11, city: "Bratislava" };
 
 export default function WeatherScreen() {
+  const { convertTemp } = useUnits();
+
+  // Responzívny breakpoint: široká obrazovka (web/tablet) vs telefón.
+  // useWindowDimensions reaguje na resize/rotáciu (na rozdiel od statického Dimensions.get).
+  const { width } = useWindowDimensions();
+  const isWide = width >= 700;
+
   // Mesto vybrané cez vyhľadávanie (má najvyššiu prioritu, ak je nastavené)
   const selectedLocationQuery = useQuery({
     queryKey: ["selectedLocation"],
@@ -78,14 +93,23 @@ export default function WeatherScreen() {
               <Text className="text-center text-lg text-white">Chyba: {error.message}</Text>
             </View>
           ) : weather ? (
-            <WeatherCard
-              icon={theme.icon}
-              city={weather.city}
-              temperature={weather.temperature}
-              description={weather.description}
-              high={weather.high}
-              low={weather.low}
-            />
+            // Na širokej obrazovke obsah zabalíme do frosted karty s max-šírkou,
+            // nech nepláva v prázdne. Na telefóne necháme len vycentrovaný obsah.
+            <View
+              className={
+                isWide
+                  ? "w-full max-w-md items-center rounded-3xl bg-white/10 px-12 py-14"
+                  : "items-center"
+              }>
+              <WeatherCard
+                icon={theme.icon}
+                city={weather.city}
+                temperature={convertTemp(weather.temperature)}
+                description={weather.description}
+                high={convertTemp(weather.high)}
+                low={convertTemp(weather.low)}
+              />
+            </View>
           ) : (
             <ActivityIndicator size="large" color="white" />
           )}
