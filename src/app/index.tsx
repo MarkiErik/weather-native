@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WeatherCard } from "@/components/weather-card";
 import { getWeatherTheme } from "@/constants/weather-theme";
+import { useAppearance } from "@/contexts/appearance";
 import { useUnits } from "@/contexts/units";
 import { getDeviceLocation } from "@/services/location";
 import { getLastLocation, getSelectedLocation, saveLastLocation } from "@/services/storage";
@@ -23,6 +24,7 @@ const BRATISLAVA = { latitude: 48.15, longitude: 17.11, city: "Bratislava" };
 
 export default function WeatherScreen() {
   const { convertTemp } = useUnits();
+  const { setIsDark } = useAppearance();
 
   // Responzívny breakpoint: široká obrazovka (web/tablet) vs telefón.
   // useWindowDimensions reaguje na resize/rotáciu (na rozdiel od statického Dimensions.get).
@@ -75,6 +77,11 @@ export default function WeatherScreen() {
 
   // Pred načítaním dát použijeme neutrálny denný gradient.
   const theme = weather ? getWeatherTheme(weather.code, weather.isDay) : getWeatherTheme(0, true);
+
+  // Oznámime tab lište, či je pozadie tmavé (aby si prefarbila ikony).
+  useEffect(() => {
+    setIsDark(theme.isDark);
+  }, [theme.isDark, setIsDark]);
 
   return (
     <LinearGradient colors={theme.colors} style={{ flex: 1 }}>

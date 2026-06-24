@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
 import { useColorScheme } from "react-native";
 
 import AppTabs from "@/components/app-tabs";
+import { AppearanceProvider } from "@/contexts/appearance";
 import { UnitsProvider } from "@/contexts/units";
 
 // QueryClient vytvoríme RAZ mimo komponentu, aby sa pri re-renderoch
@@ -14,9 +15,11 @@ export default function TabLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <UnitsProvider>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <AppTabs />
-        </ThemeProvider>
+        <AppearanceProvider>
+          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <AppTabs />
+          </ThemeProvider>
+        </AppearanceProvider>
       </UnitsProvider>
     </QueryClientProvider>
   );

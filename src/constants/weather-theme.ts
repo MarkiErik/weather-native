@@ -7,16 +7,28 @@ export type WeatherTheme = {
   colors: [string, string];
   /** Emoji ikona stavu počasia. */
   icon: string;
+  /** Je spodok gradientu tmavý? (tam sedí tab lišta — podľa toho farbíme ikony) */
+  isDark: boolean;
 };
 
 // V noci ide všetko do tmavomodrej, cez deň farby podľa stavu.
 const NIGHT: WeatherTheme["colors"] = ["#0B1026", "#1C2541"];
 
-export function getWeatherTheme(code: number, isDay: boolean): WeatherTheme {
+// Relatívna svetlosť farby (0–255). Pod prahom je farba "tmavá".
+function isColorDark(hex: string): boolean {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance < 140;
+}
+
+// Vyberie gradient + ikonu podľa počasia (bez isDark).
+function pickTheme(code: number, isDay: boolean): Omit<WeatherTheme, "isDark"> {
   if (!isDay) {
     return { colors: NIGHT, icon: code <= 2 ? "🌙" : "☁️" };
   }
-
   // Jasno / prevažne jasno
   if (code <= 1) return { colors: ["#2E8BEF", "#7CC4FB"], icon: "☀️" };
   // Polojasno
@@ -32,7 +44,12 @@ export function getWeatherTheme(code: number, isDay: boolean): WeatherTheme {
   if (code >= 71 && code <= 77) return { colors: ["#7E8C9E", "#CBD5E1"], icon: "❄️" };
   // Búrka
   if (code >= 95) return { colors: ["#2B2B3A", "#4A4A5E"], icon: "⛈️" };
-
   // Fallback
   return { colors: ["#2E8BEF", "#7CC4FB"], icon: "🌡️" };
+}
+
+export function getWeatherTheme(code: number, isDay: boolean): WeatherTheme {
+  const base = pickTheme(code, isDay);
+  // isDark počítame zo SPODNEJ farby gradientu (colors[1]) — tam je tab lišta.
+  return { ...base, isDark: isColorDark(base.colors[1]) };
 }

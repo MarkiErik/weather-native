@@ -41,3 +41,14 @@ example
 # generated native folders
 /ios
 /android
+
+# editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# logs
+*.log
+
+# Claude Code local (osobné) nastavenia
+.claude/settings.local.json
