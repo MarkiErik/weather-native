@@ -1,0 +1,13 @@
+// https://docs.expo.dev/guides/using-eslint/
+const { defineConfig } = require("eslint/config");
+const expoConfig = require("eslint-config-expo/flat");
+const eslintPluginPrettierRecommended = require("eslint-plugin-prettier/recommended");
+
+module.exports = defineConfig([
+  expoConfig,
+  eslintPluginPrettierRecommended,
+  {
+    // Auto-generované / build súbory — tie sa nelintujú
+    ignores: ["dist/*", "node_modules/*", ".expo/*", "expo-env.d.ts", "nativewind-env.d.ts"],
+  },
+]);

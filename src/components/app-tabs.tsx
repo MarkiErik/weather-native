@@ -1,29 +1,39 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { useColorScheme } from 'react-native';
+import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { useColorScheme } from "react-native";
 
-import { Colors } from '@/constants/theme';
+import { Colors } from "@/constants/theme";
 
 export default function AppTabs() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
 
   return (
     <NativeTabs
-      backgroundColor={colors.background}
+      // Žiadne pevné pozadie — namiesto bielej použijeme priesvitný "frosted" blur (iOS),
+      // cez ktorý presvitá gradient. Na Androide blur nie je, použije sa systémové pozadie.
+      blurEffect="systemUltraThinMaterial"
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.text } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Počasie</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/home.png')}
+          src={require("@/assets/images/tabIcons/home.png")}
           renderingMode="template"
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="search">
+        <NativeTabs.Trigger.Label>Hľadať</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          src={require('@/assets/images/tabIcons/explore.png')}
+          src={require("@/assets/images/tabIcons/explore.png")}
+          renderingMode="template"
+        />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="settings">
+        <NativeTabs.Trigger.Label>Nastavenia</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon
+          src={require("@/assets/images/tabIcons/home.png")}
           renderingMode="template"
         />
       </NativeTabs.Trigger>

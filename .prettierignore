@@ -1,0 +1,7 @@
+# Auto-generované / build súbory
+dist/
+node_modules/
+.expo/
+expo-env.d.ts
+nativewind-env.d.ts
+package-lock.json
