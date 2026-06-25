@@ -32,3 +32,10 @@ export async function getSelectedLocation(): Promise<DeviceLocation | null> {
   const raw = await AsyncStorage.getItem(SELECTED_LOCATION_KEY);
   return raw ? (JSON.parse(raw) as DeviceLocation) : null;
 }
+
+/**
+ * Zruší vybrané mesto → obrazovka Počasie sa vráti na GPS polohu.
+ */
+export async function clearSelectedLocation(): Promise<void> {
+  await AsyncStorage.removeItem(SELECTED_LOCATION_KEY);
+}

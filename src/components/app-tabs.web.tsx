@@ -50,7 +50,9 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 
 export function CustomTabList(props: TabListProps) {
   return (
-    <View {...props} style={styles.tabListContainer}>
+    // box-none: prázdny pruh okolo pilulky neprehĺta kliky (inak by prekrýval
+    // obsah pod ním, napr. tlačidlo 📍 vpravo hore). Pilulka klik dostane normálne.
+    <View {...props} style={styles.tabListContainer} pointerEvents="box-none">
       <ThemedView type="backgroundElement" style={styles.innerContainer}>
         {props.children}
       </ThemedView>

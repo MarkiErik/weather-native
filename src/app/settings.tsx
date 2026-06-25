@@ -1,6 +1,9 @@
-import { Pressable, Text, View } from "react-native";
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+import { Pressable, Text, useColorScheme, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAppearance } from "@/contexts/appearance";
 import { useUnits } from "@/contexts/units";
 
 const UNITS = [
@@ -10,6 +13,16 @@ const UNITS = [
 
 export default function SettingsScreen() {
   const { unit, setUnit } = useUnits();
+  const scheme = useColorScheme();
+  const { setIsDark } = useAppearance();
+
+  // Táto obrazovka má svetlé (resp. v dark mode tmavé) pozadie — tab lište povieme,
+  // nech ikony farbí podľa systémovej témy, nie podľa počasia.
+  useFocusEffect(
+    useCallback(() => {
+      setIsDark(scheme === "dark");
+    }, [scheme, setIsDark]),
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">

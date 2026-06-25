@@ -12,12 +12,24 @@ Notifications.setNotificationHandler({
 });
 
 /**
+ * Vyžiada povolenie na notifikácie. Volaj RAZ pri štarte appky — nie uprostred
+ * akcie (napr. výberu mesta), aby systémový dialóg nevyskočil neočakávane.
+ */
+export async function requestNotificationPermission(): Promise<void> {
+  try {
+    await Notifications.requestPermissionsAsync();
+  } catch {
+    // prostredie bez podpory notifikácií (napr. web) — ticho preskočíme
+  }
+}
+
+/**
  * Zobrazí local notifikáciu v lište telefónu (okamžite).
- * Pri prvom volaní vyžiada povolenie. Bez povolenia ticho nič nespraví.
+ * Povolenie iba ZISTÍ (nepýta ho), takže neblokuje a neprerušuje flow.
  */
 export async function showWeatherNotification(title: string, body: string): Promise<void> {
   try {
-    const { status } = await Notifications.requestPermissionsAsync();
+    const { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") {
       return;
     }
@@ -26,6 +38,6 @@ export async function showWeatherNotification(title: string, body: string): Prom
       trigger: null, // null = doruč hneď
     });
   } catch {
-    // Na webe / v prostredí bez podpory notifikácií len ticho preskočíme.
+    // na webe / v prostredí bez podpory notifikácií len ticho preskočíme
   }
 }

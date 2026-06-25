@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 // Zdieľa "je aktuálne pozadie tmavé?" z obrazovky Počasie do tab lišty,
 // aby si lišta vedela prefarbiť ikony (biele na tmavom, tmavé na svetlom).
@@ -12,11 +12,9 @@ const AppearanceContext = createContext<AppearanceContextValue | null>(null);
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [isDark, setIsDark] = useState(false);
-  return (
-    <AppearanceContext.Provider value={{ isDark, setIsDark }}>
-      {children}
-    </AppearanceContext.Provider>
-  );
+  // setIsDark z useState je stabilný; memo zabráni zbytočným re-renderom konzumentov.
+  const value = useMemo(() => ({ isDark, setIsDark }), [isDark]);
+  return <AppearanceContext.Provider value={value}>{children}</AppearanceContext.Provider>;
 }
 
 export function useAppearance() {
