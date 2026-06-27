@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Keyboard,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -24,6 +25,7 @@ import { fetchWeather } from "@/services/weather";
 export default function SearchScreen() {
   const [text, setText] = useState("");
   const [debounced, setDebounced] = useState("");
+  const inputRef = useRef<TextInput>(null);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { unit, convertTemp } = useUnits();
@@ -70,8 +72,20 @@ export default function SearchScreen() {
     }
   }
 
+  // Clear the field and keep the cursor in it.
+  function handleClear() {
+    setText("");
+    setDebounced("");
+    inputRef.current?.focus();
+  }
+
   async function handleSelect(city: CityResult) {
     const location = { latitude: city.latitude, longitude: city.longitude, city: city.name };
+
+    // Reset the search so it's empty next time the screen opens.
+    setText("");
+    setDebounced("");
+    Keyboard.dismiss();
 
     // Rýchle lokálne kroky (uloženie + invalidácia), potom OKAMŽITÁ navigácia.
     await saveSelectedLocation(location);
@@ -84,19 +98,37 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-neutral-950">
-      {/* Pressable obal: ťuknutie mimo inputu/zoznamu zatvorí klávesnicu */}
-      <Pressable className="flex-1 gap-4 p-6" onPress={() => Keyboard.dismiss()}>
+      {/* Tap outside the input/list dismisses the keyboard — but NOT on web, where the
+          click bubbles up from the input and would instantly blur it (focus loss). */}
+      <Pressable
+        className="flex-1 gap-4 p-6"
+        onPress={() => {
+          if (Platform.OS !== "web") Keyboard.dismiss();
+        }}>
         <Text className="text-3xl font-bold text-neutral-900 dark:text-white">Hľadať mesto</Text>
 
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder="Napíš názov mesta…"
-          placeholderTextColor="#9CA3AF"
-          autoFocus
-          returnKeyType="search"
-          className="rounded-xl bg-neutral-100 px-4 py-3 text-base text-neutral-900 dark:bg-neutral-900 dark:text-white"
-        />
+        <View className="relative justify-center">
+          <TextInput
+            ref={inputRef}
+            value={text}
+            onChangeText={setText}
+            placeholder="Napíš názov mesta…"
+            placeholderTextColor="#9CA3AF"
+            autoFocus
+            returnKeyType="search"
+            className="rounded-xl bg-neutral-100 px-4 py-3 pr-11 text-base text-neutral-900 dark:bg-neutral-900 dark:text-white"
+          />
+          {text.length > 0 && (
+            <Pressable
+              onPress={handleClear}
+              accessibilityRole="button"
+              accessibilityLabel="Vymazať"
+              hitSlop={8}
+              className="absolute bottom-0 right-1 top-0 justify-center px-2">
+              <Text className="text-lg text-neutral-400">✕</Text>
+            </Pressable>
+          )}
+        </View>
 
         {isFetching && <ActivityIndicator />}
 

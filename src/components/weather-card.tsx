@@ -6,19 +6,9 @@ type WeatherCardProps = {
   temperature: number;
   unit: "C" | "F";
   description: string;
-  high: number;
-  low: number;
 };
 
-export function WeatherCard({
-  icon,
-  city,
-  temperature,
-  unit,
-  description,
-  high,
-  low,
-}: WeatherCardProps) {
+export function WeatherCard({ icon, city, temperature, unit, description }: WeatherCardProps) {
   return (
     <View className="items-center">
       <Text className="text-7xl">{icon}</Text>
@@ -27,10 +17,6 @@ export function WeatherCard({
         {temperature}°{unit}
       </Text>
       <Text className="text-xl text-white/90">{description}</Text>
-      <View className="mt-4 flex-row gap-4">
-        <Text className="text-base text-white/80">H: {high}°</Text>
-        <Text className="text-base text-white/80">L: {low}°</Text>
-      </View>
     </View>
   );
 }

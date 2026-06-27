@@ -2,14 +2,30 @@
 // Zvyšok appky pozná len typ `Weather` a funkciu `fetchWeather`.
 // Keď neskôr vymeníš API, meníš len tento súbor.
 
+import { fetchOpenMeteo } from "@/services/open-meteo";
+
+// One hour of the hourly forecast strip.
+export type HourForecast = {
+  time: string; // local ISO, e.g. "2026-06-27T16:00"
+  temperature: number; // °C, rounded
+  code: number; // WMO code (for the icon)
+  isDay: boolean; // day/night icon variant
+  precipitationProbability: number; // %
+};
+
 export type Weather = {
   city: string;
   temperature: number;
   description: string;
-  high: number;
-  low: number;
   code: number;
   isDay: boolean;
+  humidity: number; // %
+  windSpeed: number; // km/h
+  windGusts: number; // km/h
+  windDirection: number; // degrees, meteorological (direction the wind blows FROM)
+  uvIndex: number; // current hour
+  precipitationProbability: number; // current hour, %
+  hourly: HourForecast[]; // next 24 hours
 };
 
 // WMO weather codes -> slovenský popis. Open-Meteo vracia počasie ako číselný kód.
@@ -42,39 +58,74 @@ function describeWeatherCode(code: number): string {
   return WEATHER_CODES[code] ?? "Neznáme";
 }
 
+// Shape of the Open-Meteo forecast response — only the fields we request.
+type ForecastResponse = {
+  current: {
+    time: string;
+    temperature_2m: number;
+    weather_code: number;
+    is_day: number;
+    relative_humidity_2m: number;
+    wind_speed_10m: number;
+    wind_direction_10m: number;
+    wind_gusts_10m: number;
+  };
+  hourly: {
+    time: string[];
+    temperature_2m: number[];
+    weather_code: number[];
+    is_day: number[];
+    // Open-Meteo returns null for hours beyond model range.
+    precipitation_probability: (number | null)[];
+    uv_index: (number | null)[];
+  };
+};
+
 export async function fetchWeather(
   latitude: number,
   longitude: number,
   city: string,
 ): Promise<Weather> {
-  const url =
-    `https://api.open-meteo.com/v1/forecast` +
-    `?latitude=${latitude}&longitude=${longitude}` +
-    `&current=temperature_2m,weather_code,is_day` +
-    `&daily=temperature_2m_max,temperature_2m_min` +
-    `&timezone=auto`;
+  const query =
+    `latitude=${latitude}&longitude=${longitude}` +
+    `&current=temperature_2m,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m` +
+    `&hourly=temperature_2m,weather_code,is_day,precipitation_probability,uv_index` +
+    `&forecast_days=2&timezone=auto`;
 
-  const response = await fetch(url);
-  // Od najkonkrétnejšieho po najvšeobecnejšie — generický catch-all musí byť posledný,
-  // inak by prekryl konkrétne stavy (404 má tiež response.ok === false).
-  if (response.status === 404) {
-    throw new Error(`Open-Meteo nenašlo dáta pre súradnice ${latitude},${longitude} (404)`);
-  }
-  if (response.status === 204) {
-    throw new Error(`Open-Meteo vrátilo prázdnu odpoveď (204)`);
-  }
-  if (!response.ok) {
-    throw new Error(`Open-Meteo vrátilo chybu: ${response.status}`);
-  }
+  const data = await fetchOpenMeteo<ForecastResponse>(query);
 
-  const data = await response.json();
+  // Hourly arrays start at 00:00 today. Take the first hour at/after "now" so the
+  // current UV / precipitation and the hourly strip both start from the present —
+  // findIndex (not exact indexOf) tolerates DST / formatting edge cases.
+  const currentHour = `${data.current.time.slice(0, 13)}:00`;
+  const match = data.hourly.time.findIndex((t) => t >= currentHour);
+  const startIndex = match === -1 ? 0 : match;
+
+  const hourly: HourForecast[] = data.hourly.time
+    .slice(startIndex, startIndex + 24)
+    .map((time, i) => {
+      const idx = startIndex + i;
+      return {
+        time,
+        temperature: Math.round(data.hourly.temperature_2m[idx]),
+        code: data.hourly.weather_code[idx],
+        isDay: data.hourly.is_day[idx] === 1,
+        precipitationProbability: data.hourly.precipitation_probability[idx] ?? 0,
+      };
+    });
+
   return {
     city,
     temperature: Math.round(data.current.temperature_2m),
     description: describeWeatherCode(data.current.weather_code),
-    high: Math.round(data.daily.temperature_2m_max[0]),
-    low: Math.round(data.daily.temperature_2m_min[0]),
     code: data.current.weather_code,
     isDay: data.current.is_day === 1,
+    humidity: data.current.relative_humidity_2m,
+    windSpeed: Math.round(data.current.wind_speed_10m),
+    windGusts: Math.round(data.current.wind_gusts_10m),
+    windDirection: data.current.wind_direction_10m,
+    uvIndex: Math.round(data.hourly.uv_index[startIndex] ?? 0),
+    precipitationProbability: data.hourly.precipitation_probability[startIndex] ?? 0,
+    hourly,
   };
 }

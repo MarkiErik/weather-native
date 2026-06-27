@@ -13,7 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { HourlyForecast } from "@/components/hourly-forecast";
+import { UpwindPanel } from "@/components/upwind-panel";
 import { WeatherCard } from "@/components/weather-card";
+import { WeatherMetrics } from "@/components/weather-metrics";
 import { getWeatherTheme } from "@/constants/weather-theme";
 import { useAppearance } from "@/contexts/appearance";
 import { useUnits } from "@/contexts/units";
@@ -24,6 +27,7 @@ import {
   getSelectedLocation,
   saveLastLocation,
 } from "@/services/storage";
+import { fetchUpwindField } from "@/services/upwind";
 import { fetchWeather } from "@/services/weather";
 
 // Posledný fallback, ak nemáme GPS ani uloženú polohu
@@ -92,6 +96,25 @@ export default function WeatherScreen() {
     enabled: !!coords,
   });
 
+  // Upwind sampling depends on the current wind, so it's keyed on the wind direction too.
+  const { data: upwind } = useQuery({
+    queryKey: [
+      "upwind",
+      coords?.latitude,
+      coords?.longitude,
+      weather?.windDirection,
+      weather?.windSpeed,
+    ],
+    queryFn: () =>
+      fetchUpwindField(
+        coords!.latitude,
+        coords!.longitude,
+        weather!.windDirection,
+        weather!.windSpeed,
+      ),
+    enabled: !!coords && !!weather,
+  });
+
   // Pred načítaním dát použijeme neutrálny denný gradient.
   const theme = weather ? getWeatherTheme(weather.code, weather.isDay) : getWeatherTheme(0, true);
 
@@ -132,23 +155,44 @@ export default function WeatherScreen() {
               <Text className="text-center text-lg text-white">Chyba: {error.message}</Text>
             </View>
           ) : weather ? (
-            // Na širokej obrazovke obsah zabalíme do frosted karty s max-šírkou,
-            // nech nepláva v prázdne. Na telefóne necháme len vycentrovaný obsah.
-            <View
-              className={
-                isWide
-                  ? "w-full max-w-md items-center rounded-3xl bg-white/10 px-12 py-14"
-                  : "items-center"
-              }>
-              <WeatherCard
-                icon={theme.icon}
-                city={weather.city}
-                temperature={convertTemp(weather.temperature)}
-                unit={unit}
-                description={weather.description}
-                high={convertTemp(weather.high)}
-                low={convertTemp(weather.low)}
+            // Fixed-width column so the metrics grid and hourly strip stretch
+            // properly (an auto-width "items-center" wrapper would squash them).
+            <View className="w-full max-w-md items-center px-4 py-6">
+              {/* On a wide screen the temperature sits in a frosted card so it
+                  doesn't float in empty space; on a phone it's plain. */}
+              <View
+                className={isWide ? "w-full items-center rounded-3xl bg-white/10 px-12 py-14" : ""}>
+                <WeatherCard
+                  icon={theme.icon}
+                  city={weather.city}
+                  temperature={convertTemp(weather.temperature)}
+                  unit={unit}
+                  description={weather.description}
+                />
+              </View>
+
+              <WeatherMetrics
+                windSpeed={weather.windSpeed}
+                windGusts={weather.windGusts}
+                windDirection={weather.windDirection}
+                uvIndex={weather.uvIndex}
+                humidity={weather.humidity}
+                precipitationProbability={weather.precipitationProbability}
               />
+
+              <HourlyForecast hours={weather.hourly} unit={unit} convertTemp={convertTemp} />
+
+              {upwind && (
+                <UpwindPanel
+                  city={weather.city}
+                  cityIcon={theme.icon}
+                  windDirection={weather.windDirection}
+                  windSpeed={weather.windSpeed}
+                  points={upwind.points}
+                  calm={upwind.calm}
+                  arrival={upwind.arrival}
+                />
+              )}
             </View>
           ) : (
             <ActivityIndicator size="large" color="white" />
